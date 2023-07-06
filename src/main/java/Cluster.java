@@ -1,25 +1,26 @@
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 集群状态
  *
- * @author gxz gongxuanzhang@foxmail.com
+ * @author gongxuanzhangmelt@gmail.com
  **/
 public class Cluster {
 
-    private static final Cluster INSTANCE = new Cluster();
-
-    private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
-
-    private List<String> list;
+    private final static Cluster INSTANCE = new Cluster();
 
     public static Cluster getInstance() {
         return INSTANCE;
     }
+
+    private List<String> list;
 
 
     private Cluster() {
@@ -30,22 +31,21 @@ public class Cluster {
 
     public void refresh() {
         try {
-            readWriteLock.writeLock().lock();
             if (list == null || list.isEmpty()) {
                 return;
             }
             CountDownLatch latch = new CountDownLatch(list.size());
+            ThreadPoolExecutor executor = new ThreadPoolExecutor(2, 2, 10, TimeUnit.MILLISECONDS,
+                    new ArrayBlockingQueue<>(1024), new ConvenienceThreadFactory());
             for (String s : list) {
                 CompletableFuture.runAsync(() -> {
                     System.out.println("do some thing");
                     latch.countDown();
-                });
+                }, executor);
             }
             latch.await();
         } catch (InterruptedException e) {
             e.printStackTrace();
-        } finally {
-            readWriteLock.writeLock().unlock();
         }
     }
 
@@ -55,5 +55,15 @@ public class Cluster {
         instance.refresh();
     }
 
+
+    public static class ConvenienceThreadFactory implements ThreadFactory {
+
+        AtomicInteger index = new AtomicInteger(0);
+
+        @Override
+        public Thread newThread(Runnable r) {
+            return new Thread(r, "方便线程-" + index.getAndIncrement());
+        }
+    }
 
 }
