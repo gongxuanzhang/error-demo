@@ -1,6 +1,5 @@
 # 这是在项目中遇到的一个错误demo
 >当执行Cluster类的main方法时，程序会阻塞在 latch.await()上，且jconsole工具没有检测出死锁
-<img width="1056" alt="image" src="https://github.com/gongxuanzhang/error-demo/assets/48286053/90acffc6-d5a6-4a47-9af6-27243a96f841">
 
 CompletableFuture里面的异步方法不会调用  
 
